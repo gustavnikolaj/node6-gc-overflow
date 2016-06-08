@@ -1,0 +1,16 @@
+{
+  "name": "node6-gc-overflow",
+  "version": "1.0.0",
+  "description": "",
+  "private": "true",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gustavnikolaj/node6-gc-overflow.git"
+  },
+  "author": "Gustav Nikolaj Olsen <gustavnikolaj@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gustavnikolaj/node6-gc-overflow/issues"
+  },
+  "homepage": "https://github.com/gustavnikolaj/node6-gc-overflow#readme"
+}
