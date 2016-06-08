@@ -1,18 +1,9 @@
 var megabytes = parseInt(process.argv.pop());
-
-if (typeof megabytes !== 'number') {
+if (isNaN(megabytes)) {
   throw 'Pass in one number as an argument';
 }
 
 var refs = [];
-
-function createChunk(size) {
-  var buf = Buffer.alloc(size);
-  return {
-    raw: buf,
-    str: buf.toString('utf-8')
-  };
-}
 
 function allocate(size) {
     var totalSize = size * 1024 * 1024;
@@ -20,13 +11,10 @@ function allocate(size) {
     var chunkSize = 1024;
 
     while (chunkSize < remainingSize) {
-      refs.push(createChunk(chunkSize));
+      refs.push(Buffer.alloc(chunkSize).toString('utf-8'));
+      Buffer.alloc(chunkSize).toString('utf-8');
       remainingSize -= chunkSize;
       chunkSize += 1;
-    }
-
-    if (remainingSize > 0) {
-      refs.push(createChunk(remainingSize));
     }
 }
 
