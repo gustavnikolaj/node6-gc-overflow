@@ -1,0 +1,75 @@
+Version: 5.0.71.52 (node.js v6.2.1)
+OS: Ubuntu Linux 16.04
+Architecture: x86_64
+
+What steps will reproduce the problem?
+
+Checking out https://github.com/gustavnikolaj/node6-gc-overflow and running it
+with node 6.2.1 will cause it to fail reliably, while running it under node
+version 5.11.1 (v8 version 4.6.85.31) while not.
+
+What is the expected output?
+
+Both versions are was expected to output a single line "DONE!" to stdout.
+Like below:
+
+```
+$ nvm use 5.11.1 && node --max-old-space-size=6000 index.js 4000
+Now using node v5.11.1 (npm v3.8.6)
+DONE!
+```
+
+What do you see instead?
+
+```
+$ nvm use 6.2.1 && node --max-old-space-size=6000 index.js 4000
+Now using node v6.2.1 (npm v3.9.3)
+
+#
+# Fatal error in ../deps/v8/src/heap/spaces.h, line 1516
+# Check failed: size_ >= 0.
+#
+
+==== C stack trace ===============================
+
+1: V8_Fatal
+2: 0xc56387
+3: v8::internal::MarkCompactCollector::SweepSpaces()
+4: v8::internal::MarkCompactCollector::CollectGarbage()
+5: v8::internal::Heap::MarkCompact()
+6: v8::internal::Heap::PerformGarbageCollection(v8::internal::GarbageCollector, v8::GCCallbackFlags)
+7: v8::internal::Heap::CollectGarbage(v8::internal::GarbageCollector, char const*, char const*, v8::GCCallbackFlags)
+8: v8::internal::Heap::HandleGCRequest()
+9: v8::internal::StackGuard::HandleInterrupts()
+10: v8::internal::Runtime_StackGuard(int, v8::internal::Object**, v8::internal::Isolate*)
+11: 0xf767a506338
+Illegal instruction
+```
+
+Background:
+
+We use AssetGraph-builder to build production versions of our web application.
+AssetGraph is a node.js tool that will take a web application and make various
+transformations on the code. It will find style sheets and concatenate them, pick
+up on images that is referenced and optimize them etc. Because it loads all the
+assets into memory we have had to use the --max-old-space-size flag to avoid
+running out of memory.
+
+When we attempted to upgrade one of our larger web applications to node.js v6 we
+ran into the error described above. From what we have gathered, it happens when
+the garbage collector is attempting to clear more than ~2.2GB of memory using
+the MarkCompact strategy.
+
+https://github.com/v8/v8/blob/ad16e6c2cbd2c6b0f2e8ff944ac245561c682ac2/src/heap/spaces.h#L1519-L1526
+(the stack trace above is a bit off on the line numbers, but it refers to this
+specific version of v8 that was bundled with node 6.2.1 https://github.com/nodejs/node/blob/c7b0d06183038c7ef8cac18a5dcac8b50c959c37/deps/v8/src/heap/spaces.h#L1510-L1517)
+
+Our theory is that the signed 32 bit ints are overflown and thus cause the check
+to fail. The only difference in the ShrinkSpace function between v8 4.6 and
+v8 5.0 is that the check has been promoted from a debug-check to a run time
+check, so we have most likely been exposed to this error longer than we were
+aware.
+
+We have attempted to patch it ourselves by naively changing the int types to
+size_t but without luck, so we suspect that it's a bug in the actual calculation
+algorithm.
