@@ -1,3 +1,6 @@
+Node.js: https://github.com/nodejs/node/issues/7259
+v8: https://bugs.chromium.org/p/v8/issues/detail?id=5094
+
 Reproducible with
 
 ```
